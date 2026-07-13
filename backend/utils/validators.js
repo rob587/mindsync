@@ -14,3 +14,8 @@ export const emotionSchema = Joi.object({
     }),
   }).required(),
 });
+
+export const historySchema = Joi.object({
+  userId: Joi.string().required(),
+  limit: Joi.number().min(1).max(100).default(7),
+});
