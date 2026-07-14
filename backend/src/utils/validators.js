@@ -3,6 +3,7 @@ import Joi from "joi";
 export const emotionSchema = Joi.object({
   userId: Joi.string().required(),
   landmarks: Joi.array().items(Joi.array().items(Joi.number())).required(),
+  sessionId: Joi.string().optional(),
   metrics: Joi.object({
     eyeOpenness: Joi.number().min(0).max(100),
     mouthTension: Joi.number().min(0).max(100),
