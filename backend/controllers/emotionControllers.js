@@ -29,3 +29,29 @@ export const analyzeEmotion = async (req, res) => {
     });
   }
 };
+
+// aggiungere funzione di recupero lo storico e implementare il salvataggio nel db
+
+export const getHistory = async (req, res) => {
+  try {
+    const { error, value } = historySchema.validate({
+      userId: req.params.userId,
+      limit: req.query.limit || 7,
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    res.json({
+      success: true,
+      history: [],
+    });
+  } catch (error) {
+    console.error("Error in getHistory:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+};
