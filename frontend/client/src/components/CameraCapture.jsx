@@ -8,6 +8,24 @@ const CameraCapture = () => {
   );
   const [frameCount, setFrameCount] = useState(0);
 
+  const {
+    videoRef,
+    isCameraReady,
+    isDetecting,
+    error,
+    triggerAnalysis,
+    setError,
+  } = useFaceDetection(onResult, onAnalyzing);
+
+  useEffect(() => {
+    if (isCameraActive && isCameraReady) {
+      const interval = setInterval(() => {
+        setFrameCount((prev) => prev + 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isCameraActive, isCameraReady]);
+
   return <div></div>;
 };
 
