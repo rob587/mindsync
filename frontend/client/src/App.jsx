@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import CameraCapture from "./components/CameraCapture";
-import EmotionDisplay from "./components/EmotionDisplay";
+// import CameraCapture from "./components/CameraCapture";
+// import EmotionDisplay from "./components/EmotionDisplay";
 import "./App.css";
 
 function App() {
