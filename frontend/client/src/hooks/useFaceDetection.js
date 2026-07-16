@@ -100,4 +100,153 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
       headPosition: getHeadPosition(),
     };
   }, []);
+
+  const sendToBackend = useCallback(
+    async (landmarks, metrics) => {
+      try {
+        onAnalyzing(true);
+
+        const userId = "roberto"; // O lo prendiamo da un input utente
+        const sessionId = `session_${Date.now()}`;
+
+        const result = await analyzeEmotion({
+          userId,
+          landmarks: landmarks.slice(0, 5), // Invia solo 5 punti per test
+          sessionId,
+          metrics,
+        });
+
+        onAnalyzing(false);
+        onResult(result);
+      } catch (error) {
+        console.error("Errore invio al backend:", error);
+        onAnalyzing(false);
+        onResult({
+          success: false,
+          error: error.message || "Errore di comunicazione con il server",
+        });
+      }
+    },
+    [onResult, onAnalyzing],
+  );
+
+  // Avvia l'analisi con i dati accumulati
+  const triggerAnalysis = useCallback(() => {
+    if (landmarksHistoryRef.current.length === 0) {
+      setError(
+        "Nessun dato facciale rilevato. Assicurati che la webcam sia attiva.",
+      );
+      return;
+    }
+
+    setIsDetecting(true);
+
+    // Prendi l'ultimo set di metriche
+    const lastMetrics =
+      metricsHistoryRef.current[metricsHistoryRef.current.length - 1];
+
+    if (!lastMetrics) {
+      setError("Impossibile calcolare le metriche. Riprova.");
+      setIsDetecting(false);
+      return;
+    }
+
+    // Prendi gli ultimi landmarks
+    const lastLandmarks =
+      landmarksHistoryRef.current[landmarksHistoryRef.current.length - 1];
+
+    sendToBackend(lastLandmarks, lastMetrics);
+    setIsDetecting(false);
+  }, [sendToBackend]);
+
+  // Inizializza FaceMesh
+  useEffect(() => {
+    const initializeFaceMesh = async () => {
+      try {
+        const faceMesh = new FaceMesh({
+          locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+          },
+        });
+
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+
+        faceMesh.onResults((results) => {
+          if (
+            results.multiFaceLandmarks &&
+            results.multiFaceLandmarks.length > 0
+          ) {
+            const landmarks = results.multiFaceLandmarks[0];
+            const metrics = calculateMetrics(landmarks);
+
+            if (metrics) {
+              // Salva nello storico
+              landmarksHistoryRef.current.push(landmarks);
+              metricsHistoryRef.current.push(metrics);
+
+              // Mantieni solo gli ultimi 30 frame
+              if (landmarksHistoryRef.current.length > 30) {
+                landmarksHistoryRef.current.shift();
+                metricsHistoryRef.current.shift();
+              }
+
+              lastMetricsRef.current = metrics;
+            }
+          }
+        });
+
+        faceMeshRef.current = faceMesh;
+
+        // Avvia la camera
+        const video = videoRef.current;
+        if (!video) return;
+
+        const camera = new Camera(video, {
+          onFrame: async () => {
+            await faceMesh.send({ image: video });
+          },
+          width: 640,
+          height: 480,
+        });
+
+        await camera.start();
+        cameraRef.current = camera;
+        setIsCameraReady(true);
+      } catch (error) {
+        console.error("Errore inizializzazione FaceMesh:", error);
+        setError("Errore nell'avvio della webcam. Verifica i permessi.");
+      }
+    };
+
+    initializeFaceMesh();
+
+    return () => {
+      // Pulizia
+      if (cameraRef.current) {
+        cameraRef.current.stop();
+      }
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+      }
+      if (faceMeshRef.current) {
+        faceMeshRef.current.close();
+      }
+    };
+  }, [calculateMetrics]);
+
+  return {
+    videoRef,
+    isCameraReady,
+    isDetecting,
+    error,
+    triggerAnalysis,
+    setError,
+  };
 };
+
+export default useFaceDetection;
