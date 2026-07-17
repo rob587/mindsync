@@ -25,6 +25,24 @@ const Dashboard = () => {
     checkBackend();
   }, []);
 
+  const handleAnalysisResult = (result) => {
+    setAnalysis(result);
+    setIsAnalyzing(false);
+
+    if (result.success === false) {
+      setError(result.error || "Errore durante l'analisi");
+    } else {
+      setError(null);
+      setSessionCount((prev) => prev + 1);
+    }
+  };
+
+  const handleReset = () => {
+    setAnalysis(null);
+    setError(null);
+    setIsAnalyzing(false);
+  };
+
   return <div></div>;
 };
 
