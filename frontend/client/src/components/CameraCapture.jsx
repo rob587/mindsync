@@ -17,7 +17,7 @@ const CameraCapture = ({ onResult, onAnalyzing, isAnalyzing }) => {
     error,
     triggerAnalysis,
     setError,
-  } = useFaceDetection(onResult, onAnalyzing);
+  } = useFaceDetection(onResult, onAnalyzing, isCameraActive);
 
   // Combina i ref
   useEffect(() => {
