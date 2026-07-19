@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-
+import EmotionChart from "./EmotionChart";
 const EmotionDisplay = ({ analysis, onReset }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
@@ -296,6 +296,8 @@ const EmotionDisplay = ({ analysis, onReset }) => {
             )}
           </div>
         )}
+
+        <EmotionChart history={history} />
 
         {/* Footer card */}
         <div
