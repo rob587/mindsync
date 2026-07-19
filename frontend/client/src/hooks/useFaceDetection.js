@@ -1,6 +1,5 @@
 // frontend/src/hooks/useFaceDetection.js
 import { useState, useEffect, useRef, useCallback } from "react";
-import { FilesetResolver, FaceLandmarker } from "@mediapipe/tasks-vision";
 import { analyzeEmotion } from "../services/apiService";
 
 export const useFaceDetection = (onResult, onAnalyzing) => {
@@ -9,18 +8,42 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
   const [error, setError] = useState(null);
 
   const videoRef = useRef(null);
-  const faceLandmarkerRef = useRef(null);
+  const faceMeshRef = useRef(null);
   const streamRef = useRef(null);
-  const animationFrameRef = useRef(null);
-  const lastMetricsRef = useRef(null);
+  const animationRef = useRef(null);
   const metricsHistoryRef = useRef([]);
   const landmarksHistoryRef = useRef([]);
 
-  // Calcola le metriche dai landmarks
+  // Carica FaceMesh da CDN
+  const loadFaceMesh = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      // Controlla se esiste già
+      if (window.FaceMesh) {
+        resolve(window.FaceMesh);
+        return;
+      }
+
+      // Carica lo script
+      const script = document.createElement("script");
+      script.src =
+        "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js";
+      script.crossOrigin = "anonymous";
+      script.onload = () => {
+        console.log("✅ FaceMesh loaded from CDN");
+        resolve(window.FaceMesh);
+      };
+      script.onerror = () => {
+        reject(new Error("Impossibile caricare FaceMesh"));
+      };
+      document.body.appendChild(script);
+    });
+  }, []);
+
+  // Calcola metriche
   const calculateMetrics = useCallback((landmarks) => {
     if (!landmarks || landmarks.length === 0) return null;
 
-    // Indici per occhi (FaceLandmarker)
+    // Indici
     const LEFT_EYE = [33, 133, 157, 158, 159, 160, 161, 173];
     const RIGHT_EYE = [362, 263, 387, 386, 385, 384, 398, 466];
     const MOUTH = [
@@ -28,7 +51,6 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
       37, 39, 40, 185,
     ];
 
-    // Funzione distanza
     const distance = (p1, p2) => {
       const dx = p1.x - p2.x;
       const dy = p1.y - p2.y;
@@ -36,7 +58,6 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
       return Math.sqrt(dx * dx + dy * dy + dz * dz);
     };
 
-    // Calcola apertura occhi
     const getEyeOpenness = () => {
       const leftEye = landmarks.filter((_, i) => LEFT_EYE.includes(i));
       const rightEye = landmarks.filter((_, i) => RIGHT_EYE.includes(i));
@@ -50,7 +71,6 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
       return Math.min(Math.round(avgOpen * 200), 100);
     };
 
-    // Calcola tensione bocca
     const getMouthTension = () => {
       const mouthPoints = landmarks.filter((_, i) => MOUTH.includes(i));
       if (mouthPoints.length < 4) return 50;
@@ -62,13 +82,11 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
       return Math.max(0, Math.min(100, 100 - mouthOpen * 300));
     };
 
-    // Calcola frequenza battiti
     const getBlinkRate = () => {
       const eyeOpen = getEyeOpenness();
       return eyeOpen < 30 ? 20 : 5;
     };
 
-    // Calcola posizione testa
     const getHeadPosition = () => {
       const nose = landmarks[1];
       const chin = landmarks[152];
@@ -90,7 +108,7 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
     };
   }, []);
 
-  // Invia i dati al backend
+  // Invia al backend
   const sendToBackend = useCallback(
     async (landmarks, metrics) => {
       try {
@@ -120,7 +138,7 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
     [onResult, onAnalyzing],
   );
 
-  // Avvia l'analisi
+  // Avvia analisi
   const triggerAnalysis = useCallback(() => {
     if (landmarksHistoryRef.current.length === 0) {
       setError("Nessun dato facciale rilevato.");
@@ -144,29 +162,11 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
     setIsDetecting(false);
   }, [sendToBackend]);
 
-  // Inizializza FaceLandmarker
+  // Inizializza tutto
   useEffect(() => {
-    const initializeFaceLandmarker = async () => {
+    const init = async () => {
       try {
-        // Carica il modello
-        const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm",
-        );
-
-        const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate: "CPU",
-          },
-          outputFaceBlendshapes: true,
-          runningMode: "VIDEO",
-          numFaces: 1,
-        });
-
-        faceLandmarkerRef.current = faceLandmarker;
-
-        // Avvia la webcam
+        // 1. Avvia webcam
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480 },
         });
@@ -175,32 +175,31 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
           streamRef.current = stream;
-          setIsCameraReady(true);
-
-          // Avvia il loop di rilevamento
-          detectLoop();
-        }
-      } catch (error) {
-        console.error("Errore inizializzazione:", error);
-        setError("Errore nell'avvio della webcam: " + error.message);
-      }
-    };
-
-    const detectLoop = () => {
-      const detect = async () => {
-        if (!videoRef.current || !faceLandmarkerRef.current) {
-          animationFrameRef.current = requestAnimationFrame(detect);
-          return;
+          console.log("✅ Webcam avviata");
         }
 
-        try {
-          const detections = faceLandmarkerRef.current.detectForVideo(
-            videoRef.current,
-            performance.now(),
-          );
+        // 2. Carica FaceMesh
+        const FaceMesh = await loadFaceMesh();
 
-          if (detections.faceLandmarks && detections.faceLandmarks.length > 0) {
-            const landmarks = detections.faceLandmarks[0];
+        const faceMesh = new FaceMesh({
+          locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+          },
+        });
+
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+
+        faceMesh.onResults((results) => {
+          if (
+            results.multiFaceLandmarks &&
+            results.multiFaceLandmarks.length > 0
+          ) {
+            const landmarks = results.multiFaceLandmarks[0];
             const metrics = calculateMetrics(landmarks);
 
             if (metrics) {
@@ -211,34 +210,47 @@ export const useFaceDetection = (onResult, onAnalyzing) => {
                 landmarksHistoryRef.current.shift();
                 metricsHistoryRef.current.shift();
               }
-
-              lastMetricsRef.current = metrics;
             }
           }
-        } catch (error) {
-          console.error("Errore nel rilevamento:", error);
-        }
+        });
 
-        animationFrameRef.current = requestAnimationFrame(detect);
-      };
+        faceMeshRef.current = faceMesh;
+        setIsCameraReady(true);
+        console.log("✅ FaceMesh pronto");
 
-      detect();
+        // 3. Loop di rilevamento
+        const detectLoop = async () => {
+          if (videoRef.current && faceMeshRef.current) {
+            try {
+              await faceMeshRef.current.send({ image: videoRef.current });
+            } catch (err) {
+              // Ignora errori di frame
+            }
+          }
+          animationRef.current = requestAnimationFrame(detectLoop);
+        };
+
+        detectLoop();
+      } catch (error) {
+        console.error("❌ Errore inizializzazione:", error);
+        setError("Errore avvio: " + error.message);
+      }
     };
 
-    initializeFaceLandmarker();
+    init();
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      if (faceLandmarkerRef.current) {
-        faceLandmarkerRef.current.close();
+      if (faceMeshRef.current) {
+        faceMeshRef.current.close();
       }
     };
-  }, [calculateMetrics]);
+  }, [loadFaceMesh, calculateMetrics]);
 
   return {
     videoRef,
