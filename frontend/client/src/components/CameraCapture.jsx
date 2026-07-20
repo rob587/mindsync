@@ -1,4 +1,3 @@
-// frontend/src/components/CameraCapture.jsx
 import React, { useState, useEffect, useRef } from "react";
 import useFaceDetection from "../hooks/useFaceDetection";
 
@@ -8,25 +7,28 @@ const CameraCapture = ({ onResult, onAnalyzing, isAnalyzing }) => {
     "Attiva la webcam per iniziare",
   );
   const [frameCount, setFrameCount] = useState(0);
-  const videoRefLocal = useRef(null);
+
+  // Callback chiamata dal hook dopo l'analisi — spegne la camera
+  const handleAnalysisDone = () => {
+    setIsCameraActive(false);
+    setFrameCount(0);
+    setStatusMessage("✅ Analisi completata");
+  };
 
   const {
     videoRef: hookVideoRef,
     isCameraReady,
     isDetecting,
     error,
-    triggerAnalysis,
     setError,
-  } = useFaceDetection(onResult, onAnalyzing, isCameraActive);
+  } = useFaceDetection(
+    onResult,
+    onAnalyzing,
+    isCameraActive,
+    handleAnalysisDone,
+  );
 
-  // Combina i ref
-  useEffect(() => {
-    if (hookVideoRef.current) {
-      videoRefLocal.current = hookVideoRef.current;
-    }
-  }, [hookVideoRef]);
-
-  // Aggiorna il contatore
+  // Aggiorna contatore secondi
   useEffect(() => {
     if (isCameraActive && isCameraReady) {
       const interval = setInterval(() => {
@@ -36,39 +38,10 @@ const CameraCapture = ({ onResult, onAnalyzing, isAnalyzing }) => {
     }
   }, [isCameraActive, isCameraReady]);
 
-  // Avvia webcam
-  const startCamera = async () => {
-    try {
-      setStatusMessage("📷 Avvio webcam...");
-      setIsCameraActive(true);
-      setStatusMessage("🔍 Rilevamento volto...");
-    } catch (error) {
-      console.error("Errore avvio:", error);
-      setError("Impossibile accedere alla webcam.");
-      setStatusMessage("❌ Errore");
-    }
-  };
-
-  // Ferma webcam
-  const stopCamera = () => {
-    setIsCameraActive(false);
-    setStatusMessage("🛑 Fermata");
+  const startCamera = () => {
+    setIsCameraActive(true);
+    setStatusMessage("🔍 Rilevamento volto...");
     setFrameCount(0);
-    if (hookVideoRef.current && hookVideoRef.current.srcObject) {
-      const stream = hookVideoRef.current.srcObject;
-      stream.getTracks().forEach((track) => track.stop());
-      hookVideoRef.current.srcObject = null;
-    }
-  };
-
-  // Analizza
-  const handleAnalyze = () => {
-    if (!isCameraReady) {
-      setError("Webcam non pronta");
-      return;
-    }
-    setStatusMessage("🧠 Analisi...");
-    triggerAnalysis();
   };
 
   return (
@@ -117,12 +90,11 @@ const CameraCapture = ({ onResult, onAnalyzing, isAnalyzing }) => {
                 backgroundColor: "#111",
               }}
             />
-
             <div className="camera-overlay">
               {isDetecting
                 ? "🧠 Analisi..."
                 : isCameraReady
-                  ? "✅ Volto rilevato"
+                  ? "✅ Volto rilevato — analisi tra poco..."
                   : "⏳ Caricamento..."}
             </div>
           </>
@@ -156,31 +128,16 @@ const CameraCapture = ({ onResult, onAnalyzing, isAnalyzing }) => {
             📷 Attiva Webcam
           </button>
         ) : (
-          <>
-            <button
-              className="btn-neon"
-              onClick={handleAnalyze}
-              disabled={!isCameraReady || isAnalyzing || isDetecting}
-              style={{
-                opacity:
-                  !isCameraReady || isAnalyzing || isDetecting ? "0.5" : "1",
-                cursor:
-                  !isCameraReady || isAnalyzing || isDetecting
-                    ? "not-allowed"
-                    : "pointer",
-              }}
-            >
-              {isAnalyzing || isDetecting ? "⏳ Analisi..." : "🧠 Analizza"}
-            </button>
-
-            <button
-              className="btn-neon"
-              onClick={stopCamera}
-              style={{ borderColor: "#ef4444", color: "#ef4444" }}
-            >
-              🛑 Ferma
-            </button>
-          </>
+          <button
+            className="btn-neon"
+            onClick={() => {
+              setIsCameraActive(false);
+              setFrameCount(0);
+            }}
+            style={{ borderColor: "#ef4444", color: "#ef4444" }}
+          >
+            🛑 Ferma
+          </button>
         )}
       </div>
 

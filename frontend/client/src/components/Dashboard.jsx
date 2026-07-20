@@ -15,24 +15,21 @@ const Dashboard = () => {
       try {
         await healthCheck();
         setBackendStatus("online");
-        console.log("Backend Connesso");
       } catch (error) {
         setBackendStatus("offline");
         setError("impossibile connettersi al backend");
-        console.error("backend offline", error);
       }
     };
     checkBackend();
   }, []);
 
   const handleAnalysisResult = (result) => {
-    setAnalysis(result);
     setIsAnalyzing(false);
-
     if (result.success === false) {
       setError(result.error || "Errore durante l'analisi");
     } else {
       setError(null);
+      setAnalysis(result);
       setSessionCount((prev) => prev + 1);
     }
   };
@@ -67,7 +64,6 @@ const Dashboard = () => {
     );
   }
 
-  // Mostra errore se backend offline
   if (backendStatus === "offline") {
     return (
       <div
@@ -99,70 +95,68 @@ const Dashboard = () => {
   }
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: "20px",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px",
+          padding: "12px 20px",
+          background: "rgba(17, 17, 17, 0.6)",
+          borderRadius: "12px",
+          border: "1px solid rgba(0, 212, 255, 0.05)",
         }}
       >
-        {/* Header con stato backend */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "10px",
-            padding: "12px 20px",
-            background: "rgba(17, 17, 17, 0.6)",
-            borderRadius: "12px",
-            border: "1px solid rgba(0, 212, 255, 0.05)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span
-              style={{
-                display: "inline-block",
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                background: backendStatus === "online" ? "#34d399" : "#ef4444",
-                boxShadow:
-                  backendStatus === "online"
-                    ? "0 0 10px rgba(52, 211, 153, 0.5)"
-                    : "none",
-                animation:
-                  backendStatus === "online"
-                    ? "pulse 2s ease-in-out infinite"
-                    : "none",
-              }}
-            ></span>
-            <span style={{ color: "#6b7280", fontSize: "0.85rem" }}>
-              Backend {backendStatus === "online" ? "🟢 Online" : "🔴 Offline"}
-            </span>
-          </div>
-          <div style={{ color: "#4b5563", fontSize: "0.8rem" }}>
-            Sessioni: {sessionCount}
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              background: backendStatus === "online" ? "#34d399" : "#ef4444",
+              boxShadow:
+                backendStatus === "online"
+                  ? "0 0 10px rgba(52, 211, 153, 0.5)"
+                  : "none",
+              animation:
+                backendStatus === "online"
+                  ? "pulse 2s ease-in-out infinite"
+                  : "none",
+            }}
+          ></span>
+          <span style={{ color: "#6b7280", fontSize: "0.85rem" }}>
+            Backend {backendStatus === "online" ? "🟢 Online" : "🔴 Offline"}
+          </span>
         </div>
+        <div style={{ color: "#4b5563", fontSize: "0.8rem" }}>
+          Sessioni: {sessionCount}
+        </div>
+      </div>
 
-        {/* Contenuto principale */}
-        {!analysis ? (
-          <CameraCapture
-            onResult={handleAnalysisResult}
-            onAnalyzing={setIsAnalyzing}
-            isAnalyzing={isAnalyzing}
-          />
-        ) : (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: analysis ? "1fr 1fr" : "1fr",
+          gap: "20px",
+          alignItems: "start",
+        }}
+      >
+        <CameraCapture
+          onResult={handleAnalysisResult}
+          onAnalyzing={setIsAnalyzing}
+          isAnalyzing={isAnalyzing}
+        />
+
+        {analysis && (
           <EmotionDisplay analysis={analysis} onReset={handleReset} />
         )}
-
-        {/* Errori globali */}
-        {error && !analysis && <div className="error-banner">⚠️ {error}</div>}
       </div>
-    </>
+
+      {error && !analysis && <div className="error-banner">⚠️ {error}</div>}
+    </div>
   );
 };
 

@@ -12,6 +12,7 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
   const animationRef = useRef(null);
   const metricsHistoryRef = useRef([]);
   const landmarksHistoryRef = useRef([]);
+  const hasAnalyzedRef = useRef(false);
 
   const loadFaceMesh = useCallback(() => {
     return new Promise((resolve, reject) => {
@@ -200,6 +201,21 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
       setIsCameraReady(false);
     };
   }, [isCameraActive, loadFaceMesh, calculateMetrics]);
+
+  useEffect(() => {
+    if (!isCameraActive || !isCameraReady) return;
+    if (hasAnalyzedRef.current) return;
+
+    const timeout = setTimeout(() => {
+      if (landmarksHistoryRef.current.length > 0) {
+        console.log("🔄 Auto-analisi avviata...");
+        hasAnalyzedRef.current = true;
+        triggerAnalysis();
+      }
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [isCameraActive, isCameraReady, triggerAnalysis]);
 
   return {
     videoRef,
