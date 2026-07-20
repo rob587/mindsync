@@ -1,22 +1,14 @@
 export function analyzeEmotionMetrics(metrics) {
   const { eyeOpenness, mouthTension, blinkRate, headPosition } = metrics;
 
-  const stress = Math.min(
-    Math.round(mouthTension * 0.6 + blinkRate * 0.4),
-    100,
-  );
+  const clamp = (val) => Math.max(0, Math.min(100, Math.round(val)));
 
-  const focus = Math.min(
-    Math.round(eyeOpenness * 0.7 + (100 - Math.abs(headPosition.y) * 20)),
-    100,
+  const stress = clamp(mouthTension * 0.6 + blinkRate * 0.4);
+  const focus = clamp(
+    eyeOpenness * 0.7 + (100 - Math.abs(headPosition.y) * 20),
   );
-
-  const energy = Math.min(
-    Math.round(blinkRate * 0.3 + Math.abs(headPosition.x) * 30),
-    100,
-  );
-
-  const valence = Math.min(Math.round((100 - stress) * 0.6 + focus * 0.4), 100);
+  const energy = clamp(blinkRate * 0.3 + Math.abs(headPosition.x) * 30);
+  const valence = clamp((100 - stress) * 0.6 + focus * 0.4);
 
   let mood = "neutrale";
   if (stress > 70 && focus < 40) mood = "stressato";
@@ -26,12 +18,5 @@ export function analyzeEmotionMetrics(metrics) {
   else if (focus > 70) mood = "concentrato";
   else if (stress > 60) mood = "teso";
 
-  return {
-    stress,
-    focus,
-    energy,
-    valence,
-    mood,
-    raw: metrics,
-  };
+  return { stress, focus, energy, valence, mood, raw: metrics };
 }
