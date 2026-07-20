@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { analyzeEmotion } from "../services/apiService";
 
-export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
+export const useFaceDetection = (
+  onResult,
+  onAnalyzing,
+  isCameraActive,
+  onAnalysisDone,
+) => {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
   const [error, setError] = useState(null);
@@ -13,6 +18,7 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
   const metricsHistoryRef = useRef([]);
   const landmarksHistoryRef = useRef([]);
   const hasAnalyzedRef = useRef(false);
+  const triggerAnalysisRef = useRef(null);
 
   const loadFaceMesh = useCallback(() => {
     return new Promise((resolve, reject) => {
@@ -99,13 +105,14 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
         });
         onAnalyzing(false);
         onResult(result);
+        if (onAnalysisDone) onAnalysisDone();
       } catch (error) {
         console.error("Errore invio al backend:", error);
         onAnalyzing(false);
         onResult({ success: false, error: error.message || "Errore server" });
       }
     },
-    [onResult, onAnalyzing],
+    [onResult, onAnalyzing, onAnalysisDone],
   );
 
   const triggerAnalysis = useCallback(() => {
@@ -127,8 +134,10 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
     setIsDetecting(false);
   }, [sendToBackend]);
 
+  triggerAnalysisRef.current = triggerAnalysis;
+
   useEffect(() => {
-    if (!isCameraActive) return; // ← non parte finché non clicchi
+    if (!isCameraActive) return;
 
     const init = async () => {
       try {
@@ -199,6 +208,9 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
         streamRef.current.getTracks().forEach((t) => t.stop());
       if (faceMeshRef.current) faceMeshRef.current.close();
       setIsCameraReady(false);
+      hasAnalyzedRef.current = false; // ← resetta per la prossima sessione
+      metricsHistoryRef.current = [];
+      landmarksHistoryRef.current = [];
     };
   }, [isCameraActive, loadFaceMesh, calculateMetrics]);
 
@@ -206,16 +218,24 @@ export const useFaceDetection = (onResult, onAnalyzing, isCameraActive) => {
     if (!isCameraActive || !isCameraReady) return;
     if (hasAnalyzedRef.current) return;
 
+    console.log("⏳ Avvio countdown 5 secondi...");
+
     const timeout = setTimeout(() => {
+      console.log(
+        "⏰ Timeout scattato! Landmarks:",
+        landmarksHistoryRef.current.length,
+      );
       if (landmarksHistoryRef.current.length > 0) {
         console.log("🔄 Auto-analisi avviata...");
         hasAnalyzedRef.current = true;
-        triggerAnalysis();
+        triggerAnalysisRef.current();
+      } else {
+        console.log("❌ Nessun landmark disponibile");
       }
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timeout);
-  }, [isCameraActive, isCameraReady, triggerAnalysis]);
+  }, [isCameraActive, isCameraReady]);
 
   return {
     videoRef,
