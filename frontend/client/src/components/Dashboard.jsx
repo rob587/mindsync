@@ -3,7 +3,7 @@ import CameraCapture from "./CameraCapture";
 import EmotionDisplay from "./EmotionDisplay";
 import { healthCheck } from "../services/apiService";
 
-const Dashboard = () => {
+const Dashboard = ({ onMoodChange }) => {
   const [backendStatus, setBackendStatus] = useState("checking");
   const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -31,6 +31,8 @@ const Dashboard = () => {
       setError(null);
       setAnalysis(result);
       setSessionCount((prev) => prev + 1);
+      console.log("Mood rilevato:", result.analysis?.mood);
+      if (onMoodChange) onMoodChange(result.analysis?.mood);
     }
   };
 
