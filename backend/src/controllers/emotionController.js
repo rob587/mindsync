@@ -3,6 +3,10 @@ import { emotionSchema } from "../utils/validators.js";
 import { analyzeEmotionMetrics } from "../services/analysisService.js";
 import { generateAdvice } from "../services/aiService.js";
 
+import { Groq } from "groq-sdk";
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 export const analyzeEmotion = async (req, res) => {
   try {
     console.log(" Ricevuta richiesta analyzeEmotion");
@@ -184,5 +188,23 @@ export const getHistory = async (req, res) => {
       success: false,
       error: error.message || "Internal server error",
     });
+  }
+};
+
+export const chat = async (req, res) => {
+  try {
+    const { message, analysis, advice, history } = req.body;
+
+    const { stress, focus, energy, valence, mood } = analysis;
+
+    const conversationHistory = history.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    // prompt
+  } catch (error) {
+    console.error("ERRORE CHAT:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };

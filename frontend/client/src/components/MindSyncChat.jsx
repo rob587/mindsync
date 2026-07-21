@@ -81,7 +81,7 @@ const MindSyncChat = ({ analysis }) => {
             textTransform: "uppercase",
           }}
         >
-          🧠 Parla con MindSync
+          Parla con MindSync
         </h3>
 
         {/* Messaggi */}
@@ -141,7 +141,7 @@ const MindSyncChat = ({ analysis }) => {
                   fontSize: "0.9rem",
                 }}
               >
-                ⏳ MindSync sta pensando...
+                MindSync sta pensando...
               </div>
             </div>
           )}
