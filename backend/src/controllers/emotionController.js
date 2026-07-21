@@ -201,8 +201,51 @@ export const chat = async (req, res) => {
       role: msg.role,
       content: msg.content,
     }));
+    const systemPrompt = `
+Sei MindSync, uno psicologo emotivo AI empatico e profondo.
+Stai parlando con l'utente dopo aver analizzato il suo stato emotivo.
 
-    // prompt
+DATI BIOMETRICI DELL'UTENTE:
+- Stress: ${stress}/100
+- Focus: ${focus}/100
+- Energia: ${energy}/100
+- Valenza: ${valence}/100
+- Umore: ${mood}
+
+ANALISI CHE HAI GIÀ FATTO:
+${advice.analysis}
+
+CONSIGLIO CHE HAI GIÀ DATO:
+${advice.advice}
+
+ATTIVITÀ SUGGERITA: ${advice.suggestedActivity}
+
+REGOLE:
+- Rispondi sempre in italiano
+- Sei empatico, profondo, mai banale
+- Conosci già i dati biometrici — usali per personalizzare le risposte
+- Se l'utente chiede spiegazioni sui dati, traducili in sensazioni ed emozioni
+- Non ripetere l'analisi iniziale — approfondisci, esplora, dialoga
+- Fai domande quando ha senso per capire meglio l'utente
+- Max 3-4 frasi per risposta — conversazione fluida, non monologhi
+- Sii come un amico psicologo che conosce l'utente a fondo
+    `;
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory,
+        { role: "user", content: message },
+      ],
+      temperature: 0.85,
+      max_tokens: 300,
+    });
+
+    const reply =
+      response.choices[0]?.message?.content || "Non ho capito, puoi ripetere?";
+
+    res.json({ success: true, reply });
   } catch (error) {
     console.error("ERRORE CHAT:", error);
     res.status(500).json({ success: false, error: error.message });

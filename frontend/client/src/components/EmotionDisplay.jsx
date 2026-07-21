@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import EmotionChart from "./EmotionChart";
+import MindSyncChat from "./MindSyncChat";
 const EmotionDisplay = ({ analysis, onReset }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
@@ -298,6 +299,7 @@ const EmotionDisplay = ({ analysis, onReset }) => {
         )}
 
         <EmotionChart history={history} />
+        <MindSyncChat analysis={analysis} />
 
         {/* Footer card */}
         <div
