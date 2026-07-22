@@ -28,6 +28,29 @@ const SessionPage = () => {
     fetchSession();
   }, [id]);
 
+  const getMoodInfo = (mood) => {
+    const map = {
+      stressato: { emoji: "😰", color: "#ef4444" },
+      "rilassato e concentrato": { emoji: "😌", color: "#34d399" },
+      entusiasta: { emoji: "🤩", color: "#fbbf24" },
+      stanco: { emoji: "😴", color: "#6b7280" },
+      concentrato: { emoji: "🧠", color: "#22d3ee" },
+      teso: { emoji: "😬", color: "#f97316" },
+      neutrale: { emoji: "😐", color: "#9ca3af" },
+    };
+    return map[mood] || { emoji: "😐", color: "#9ca3af" };
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return <div>SessionPage</div>;
 };
 
