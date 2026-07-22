@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import EmotionChart from "./EmotionChart";
 import MindSyncChat from "./MindSyncChat";
+import { useNavigate } from "react-router-dom";
 const EmotionDisplay = ({ analysis, onReset }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showHistory, setShowHistory] = useState(true);
+  const [confirmSession, setConfirmSession] = useState(null);
   const speechSynthRef = useRef(null);
 
   const { analysis: metrics, advice, history, timestamp } = analysis;
   const { stress, focus, energy, valence, mood } = metrics || {};
+  const navigate = useNavigate();
 
   useEffect(() => {
     if ("speechSynthesis" in window) {
@@ -262,7 +265,12 @@ const EmotionDisplay = ({ analysis, onReset }) => {
             {showHistory && (
               <div className="history-list">
                 {history.map((item, index) => (
-                  <div key={index} className="history-item">
+                  <div
+                    key={index}
+                    className="history-item"
+                    onClick={() => setConfirmSession(item)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <span className="h-mood">
                       {getMoodInfo(item.mood).emoji} {item.mood || "N/A"}
                     </span>
@@ -315,6 +323,83 @@ const EmotionDisplay = ({ analysis, onReset }) => {
           MindSync — Analisi completata
         </div>
       </div>
+
+      {/* modale di conferma */}
+
+      {confirmSession && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(17,17,17,0.95)",
+              border: "1px solid rgba(0,212,255,0.2)",
+              borderRadius: "20px",
+              padding: "30px",
+              maxWidth: "400px",
+              width: "90%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "3rem" }}>
+              {getMoodInfo(confirmSession.mood).emoji}
+            </div>
+            <h3 style={{ color: "#e5e7eb", fontSize: "1.1rem" }}>
+              Vuoi riaprire questa sessione?
+            </h3>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: "12px",
+                padding: "15px",
+                fontSize: "0.85rem",
+                color: "#9ca3af",
+              }}
+            >
+              <p>
+                Umore:{" "}
+                <span style={{ color: "#00d4ff" }}>{confirmSession.mood}</span>
+              </p>
+              <p>
+                Stress: {confirmSession.stress}% · Focus: {confirmSession.focus}
+                %
+              </p>
+              <p>{formatDate(confirmSession.created_at)}</p>
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={() => setConfirmSession(null)}
+                className="btn-neon"
+                style={{ flex: 1, borderColor: "#6b7280", color: "#6b7280" }}
+              >
+                Annulla
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmSession(null);
+                  navigate(`/session/${confirmSession.id}`);
+                }}
+                className="btn-neon"
+                style={{ flex: 1 }}
+              >
+                Apri sessione
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
