@@ -70,8 +70,91 @@ const SessionPage = () => {
     );
   }
 
+  const moodInfo = getMoodInfo(session.mood);
+  const advice = session.advice_given ? JSON.parse(session.advice_given) : null
 
-  return <div>SessionPage</div>;
+
+  const analysisObj = {
+    analysis: {
+      stress: session.stress,
+      focus: session.focus,
+      energy: session.energy,
+      valence: session.valence,
+      mood: session.mood,
+    },
+    advice: advice || {
+      analysis: "Sessione precedente",
+      advice: "",
+      suggestedActivity: session.suggested_activity || "",
+      motivation: "",
+    }
+  }
+
+  return <>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/")}
+        className="btn-neon"
+        style={{ alignSelf: "flex-start", padding: "8px 20px", fontSize: "0.85rem", borderColor: "#6b7280", color: "#6b7280" }}
+      >
+        ← Torna alla home
+      </button>
+
+      {/* Header sessione */}
+      <div className="glass-card" style={{ padding: "25px", textAlign: "center" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "10px" }}>{moodInfo.emoji}</div>
+        <h2 style={{ color: moodInfo.color, fontSize: "1.4rem", marginBottom: "5px", textTransform: "capitalize" }}>
+          {session.mood}
+        </h2>
+        <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>{formatDate(session.created_at)}</p>
+      </div>
+
+      {/* Metriche */}
+      <div className="emotion-grid">
+        <div className="emotion-card">
+          <div className="label">Stress</div>
+          <div className="value stress">{session.stress}%</div>
+        </div>
+        <div className="emotion-card">
+          <div className="label">Focus</div>
+          <div className="value focus">{session.focus}%</div>
+        </div>
+        <div className="emotion-card">
+          <div className="label">Energia</div>
+          <div className="value energy">{session.energy}%</div>
+        </div>
+        <div className="emotion-card">
+          <div className="label">Valenza</div>
+          <div className="value valence">{session.valence}%</div>
+        </div>
+      </div>
+
+      {/* Consiglio AI originale */}
+      {advice && (
+        <div className="advice-box">
+          <h3 style={{ color: "#a78bfa", fontSize: "0.9rem", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "15px" }}>
+            Analisi originale
+          </h3>
+          <div className="advice-analysis">{advice.analysis}</div>
+          <div className="advice-tip">💡 {advice.advice}</div>
+          {advice.suggestedActivity && (
+            <span className="advice-activity">
+              {advice.suggestedActivity}
+            </span>
+          )}
+          {advice.motivation && (
+            <div className="advice-motivation">💫 {advice.motivation}</div>
+          )}
+        </div>
+      )}
+
+      {/* Chat */}
+      <MindSyncChat analysis={analysisObj} />
+
+    </div>
+  </>;
 };
 
 export default SessionPage;
