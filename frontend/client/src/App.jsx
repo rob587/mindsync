@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { Routes, Route } from "react-router-dom";
 import Dashboard from "./components/Dashboard";
+import SessionPage from "./pages/SessionPage";
 import "./App.css";
 
 function App() {
@@ -35,7 +37,13 @@ function App() {
 
         {/* Dashboard principale */}
         <main className="app-main">
-          <Dashboard onMoodChange={setCurrentMood} />
+          <Routes>
+            <Route
+              path="/"
+              element={<Dashboard onMoodChange={setCurrentMood} />}
+            />
+            <Route path="/session/:id" element={<SessionPage />} />
+          </Routes>
         </main>
 
         {/* Footer */}
