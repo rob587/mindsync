@@ -251,3 +251,38 @@ REGOLE:
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export const getSession = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+        es.id,
+        es.stress,
+        es.focus,
+        es.energy,
+        es.valence,
+        es.mood,
+        es.created_at,
+        es.advice_given,
+        sa.activity_type as suggested_activity,
+        sa.completed as activity_completed
+       FROM emotion_states es
+       LEFT JOIN suggested_activities sa ON es.id = sa.emotion_state_id
+       WHERE es.id = $1`,
+      [id],
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Sessione non trovata" });
+    }
+
+    res.json({ success: true, session: result.rows[0] });
+  } catch (error) {
+    console.error("ERRORE GET SESSION:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
