@@ -51,6 +51,26 @@ const SessionPage = () => {
     });
   };
 
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "60px" }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (error || !session) {
+    return (
+      <div className="glass-card" style={{ padding: "40px", textAlign: "center" }}>
+        <p style={{ color: "#ef4444" }}>❌ {error || "Sessione non trovata"}</p>
+        <button className="btn-neon" onClick={() => navigate("/")} style={{ marginTop: "20px" }}>
+          ← Torna alla home
+        </button>
+      </div>
+    );
+  }
+
+
   return <div>SessionPage</div>;
 };
 
